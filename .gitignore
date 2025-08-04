@@ -1,0 +1,31 @@
+uploads/
+
+# 常见 IDE 生成的文件
+.idea/
+.vscode/
+
+# 编译产生的文件和目录
+build/
+dist/
+target/
+
+# 依赖缓存
+node_modules/
+__pycache__/
+*.egg-info/
+
+# 日志文件
+*.log
+*.log.*
+
+# 环境变量配置文件
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 临时文件
+*.tmp
+*.temp
+*.bak

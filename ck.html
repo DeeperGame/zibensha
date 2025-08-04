@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>资本杀 - 卡牌对战游戏 @财猫猫</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #2d388a);
+            color: white;
+            min-height: 100vh;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            width: 80%;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 2.8rem;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            margin-bottom: 15px;
+            background: linear-gradient(to right, #ff7e5f, #feb47b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .score-board {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            margin-top: 15px;
+            font-size: 1.3rem;
+        }
+        
+        .player-info {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px 30px;
+            border-radius: 15px;
+            min-width: 200px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .player-info.active {
+            border: 3px solid #ffc107;
+            box-shadow: 0 0 20px #ffc107;
+        }
+        
+        .game-ui {
+            display: flex;
+            flex: 1;
+            gap: 30px;
+            height: auto;
+            min-height: 600px;
+        }
+        
+        .game-area {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            gap: 20px;
+            flex: 1;
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.25);
+        }
+        
+        .canvas-container {
+            position: relative;
+            flex: 1;
+            border-radius: 20px;
+            overflow: hidden;
+            aspect-ratio: 8/9;
+        }
+        
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        .game-status {
+            width: 260px;
+            height: 95%;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 15px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            height: fit-content;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin: auto 0;
+        }
+        
+        .game-status h2 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #ffc107;
+            font-size: 1.4rem;
+        }
+        
+        .phase-indicator {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 0.95rem;
+            text-align: center;
+        }
+        
+        .phase-indicator.active {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            font-weight: bold;
+        }
+        
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(to right, #f09819, #edde5d);
+            color: #1a2a6c;
+            font-weight: bold;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        
+        .btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .player-area {
+            position: absolute;
+            width: 100%;
+            height: 35%;
+            z-index: 2;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .player-area.player1 {
+            top: 5%;
+        }
+        
+        .player-area.player2 {
+            bottom: 5%;
+        }
+        
+        .battle-zone {
+            position: absolute;
+            width: 85%;
+            height: 35%;
+            top: 32.5%;
+            left: 7.5%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1;
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+        
+        .battle-info {
+            position: absolute;
+            width: 100%;
+            bottom: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            z-index: 5;
+        }
+        
+        .battle-info .player-info {
+            min-width: 180px;
+            padding: 12px 25px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .battle-info .player-info h3 {
+            margin-bottom: 8px;
+            color: #feb47b;
+        }
+        
+        .log {
+            width: 100%;
+            height: 150px;
+            margin-top: 25px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .log h3 {
+            margin-bottom: 15px;
+            color: #feb47b;
+            font-size: 1.5rem;
+        }
+        
+        .log-entry {
+            font-size: 1.05rem;
+            margin: 8px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .log-entry:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #ff7e5f;
+            font-size: 1.5rem;
+        }
+        
+        @media (max-width: 1200px) {
+            .game-ui {
+                flex-direction: column;
+                height: auto;
+            }
+            
+            .game-status {
+                width: 100%;
+                height: auto;
+                position: static;
+                margin-top: 20px;
+            }
+            
+            .game-area {
+                height: auto;
+                flex-direction: column;
+            }
+            
+            .canvas-container {
+                height: 500px;
+            }
+            
+            .player-info {
+                min-width: 180px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .game-container {
+                width: 95%;
+            }
+            
+            .header h1 {
+                font-size: 2.2rem;
+            }
+            
+            .score-board {
+                flex-direction: column;
+                gap: 15px;
+                align-items: center;
+            }
+            
+            .player-info {
+                width: 100%;
+                max-width: 300px;
+            }
+            
+            .battle-info {
+                flex-direction: column;
+                gap: 15px;
+                align-items: center;
+            }
+            
+            .game-status {
+                width: 100%;
+                padding: 10px;
+            }
+            
+            .game-status h2 {
+                font-size: 1.2rem;
+            }
+            
+            .btn {
+                padding: 8px 12px;
+                font-size: 0.9rem;
+            }
+            
+            .canvas-container {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>资本杀 - 卡牌对战游戏 @财猫猫</h1>
+            <div class="score-board">
+                <div class="player-info player1-info active">
+                    <h3>玩家</h3>
+                    <p>生命值: <span class="hp">30</span></p>
+                    <p>法力水晶: <span class="mana">1</span>/<span class="max-mana">1</span></p>
+                </div>
+                <div class="player-info player2-info">
+                    <h3>对手</h3>
+                    <p>生命值: <span class="hp">30</span></p>
+                    <p>法力水晶: <span class="mana">1</span>/<span class="max-mana">1</span></p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="game-ui">
+            <div class="game-area">
+                <div class="canvas-container">
+                    <div id="gameCanvas"></div>
+                    
+                    <div class="player-area player1"></div>
+                    <div class="battle-zone"></div>
+                    <div class="player-area player2"></div>
+                    
+                    <div class="battle-info">
+                        <div class="player-info">
+                            <h3>玩家手牌</h3>
+                            <p>数量: <span id="playerHandCount">0</span></p>
+                        </div>
+                        <div class="player-info">
+                            <h3>对手手牌</h3>
+                            <p>数量: <span id="opponentHandCount">0</span></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="game-status">
+                    <h2>游戏状态</h2>
+                    <div class="phase-indicator active">当前阶段: 准备阶段</div>
+                    <div class="actions">
+                        <button id="drawBtn" class="btn">抽卡</button>
+                        <button id="endTurnBtn" class="btn">结束回合</button>
+                        <button id="restartBtn" class="btn">重新开始</button>
+                    </div>
+                    <div class="deck-info">
+                        <h3>卡组信息</h3>
+                        <p>剩余卡牌: <span id="deckCount">30</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="log">
+            <h3>游戏日志</h3>
+            <div id="logEntries">
+                <div class="log-entry">游戏开始！你的先手回合。</div>
+                <div class="log-entry">初始手牌: 4张，剩余卡牌: 30张</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 主游戏控制器
+        class GameController {
+            constructor() {
+                // 游戏状态
+                this.gameState = {
+                    players: [
+                        { name: "玩家", hp: 30, mana: 1, maxMana: 1, hand: [], deck: [], battlefield: [], discardPile: [] },
+                        { name: "对手", hp: 30, mana: 1, maxMana: 1, hand: [], deck: [], battlefield: [], discardPile: [] }
+                    ],
+                    currentPlayer: 0,
+                    phase: "draw",
+                    turnCount: 1,
+                    selectedCard: null
+                };
+                
+                // 游戏视图
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.canvasContainer = document.getElementById('gameCanvas');
+                
+                // 卡牌动画管理器
+                this.animationManager = new CardAnimationManager();
+                
+                // 卡牌配置（34张卡牌）
+                this.cardConfigurations = this.generateDeck(34);
+                
+                // 卡背图片
+                this.cardBacks = [
+                    "https://image.flaticon.com/icons/png/512/1114/1114950.png",
+                    "https://image.flaticon.com/icons/png/512/1114/1114943.png",
+                    "https://image.flaticon.com/icons/png/512/1114/1114946.png"
+                ];
+                
+                // 使用用户提供的图片作为卡片正面
+                this.cardFronts = [
+                    "https://pics5.baidu.com/feed/e61190ef76c6a7ef1485bf2236b36a5af2de66ec.jpeg@f_auto?token=6a850eb797f82415cfbe1e8c226ce6fa"
+                ];
+                
+                this.loader = new THREE.TextureLoader();
+            }
+            
+            // 生成卡组（34张卡牌）
+            generateDeck(count) {
+                const baseCards = [
+                    { id: 1, name: "资本注入", cost: 1, attack: 1, health: 2, type: "creature" },
+                    { id: 2, name: "市场壁垒", cost: 2, attack: 0, health: 4, type: "creature" },
+                    { id: 3, name: "并购狂潮", cost: 2, attack: 3, health: 2, type: "creature" },
+                    { id: 4, name: "价格战", cost: 2, damage: 3, type: "spell" },
+                    { id: 5, name: "资产重组", cost: 1, heal: 2, type: "spell" },
+                    { id: 6, name: "垄断巨头", cost: 3, attack: 4, health: 2, type: "creature" },
+                    { id: 7, name: "投资顾问", cost: 3, attack: 2, health: 3, type: "creature" },
+                    { id: 8, name: "市场冲击", cost: 1, damage: 2, type: "spell" }
+                ];
+                
+                const deck = [];
+                for (let i = 0; i < count; i++) {
+                    const card = {...baseCards[i % baseCards.length]};
+                    card.uniqueId = `${card.id}_${i}`; // 确保每张卡有唯一ID
+                    deck.push(card);
+                }
+                return deck;
+            }
+            
+            // 初始化游戏
+            init() {
+                this.initThreeJS();
+                this.initLighting();
+                this.initGameState();
+                this.setupEventListeners();
+                this.animate();
+                this.log("游戏初始化完成");
+            }
+            
+            // 初始化Three.js
+            initThreeJS() {
+                // 创建场景
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x0d253f);
+                
+                // 创建相机
+                this.camera = new THREE.PerspectiveCamera(
+                    45, 
+                    this.canvasContainer.clientWidth / this.canvasContainer.clientHeight, 
+                    0.1, 
+                    1000
+                );
+                this.camera.position.set(0, 8, 20);
+                this.camera.lookAt(0, 0, 0);
+                
+                // 创建渲染器
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                this.renderer.setSize(this.canvasContainer.clientWidth, this.canvasContainer.clientHeight);
+                this.renderer.setPixelRatio(window.devicePixelRatio);
+                this.canvasContainer.appendChild(this.renderer.domElement);
+                
+                // 响应窗口大小变化
+                window.addEventListener('resize', () => this.onWindowResize());
+                
+                // 添加事件监听器用于卡牌交互
+                this.renderer.domElement.addEventListener('mousedown', (e) => this.onMouseDown(e));
+                this.renderer.domElement.addEventListener('mouseup', (e) => this.onMouseUp(e));
+                this.renderer.domElement.addEventListener('mousemove', (e) => this.onMouseMove(e));
+            }
+            
+            // 初始化光照
+            initLighting() {
+                // 环境光
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+                this.scene.add(ambientLight);
+                
+                // 方向光1（左上）
+                const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight1.position.set(-15, 20, 15);
+                this.scene.add(directionalLight1);
+                
+                // 方向光2（右下）
+                const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.6);
+                directionalLight2.position.set(15, -10, -15);
+                this.scene.add(directionalLight2);
+                
+                // 点光源（中间偏上）
+                const pointLight = new THREE.PointLight(0xffccaa, 1.0, 100);
+                pointLight.position.set(0, 8, 0);
+                this.scene.add(pointLight);
+            }
+            
+            // 初始化游戏状态
+            initGameState() {
+                // 为两个玩家初始化卡组
+                for (let playerIndex = 0; playerIndex < this.gameState.players.length; playerIndex++) {
+                    const player = this.gameState.players[playerIndex];
+                    
+                    // 复制卡牌配置作为卡组（34张）
+                    player.deck = [...this.cardConfigurations];
+                    
+                    // 洗牌
+                    this.shuffleDeck(player.deck);
+                    
+                    // 抽起始手牌（4张）
+                    for (let i = 0; i < 4; i++) {
+                        const card = player.deck.pop();
+                        player.hand.push(card);
+                    }
+                    
+                    this.log(`${player.name}初始手牌: ${player.hand.length}张，剩余卡牌: ${player.deck.length}张`);
+                }
+                
+                // 更新UI
+                this.updateUI();
+                
+                // 为玩家创建初始手牌
+                this.createHandCards(0);
+                this.createHandCards(1);
+            }
+            
+            // 洗牌函数
+            shuffleDeck(deck) {
+                for (let i = deck.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [deck[i], deck[j]] = [deck[j], deck[i]];
+                }
+            }
+            
+            // 创建手牌
+            createHandCards(playerIndex) {
+                const player = this.gameState.players[playerIndex];
+                const handSize = player.hand.length;
+                const maxHandSize = 10;
+                const offset = handSize > maxHandSize ? 0.25 : 0.35;
+                
+                player.hand.forEach((card, index) => {
+                    const position = new THREE.Vector3(
+                        (index - (handSize - 1) / 2) * offset,
+                        playerIndex === 0 ? -4 : 4,
+                        -5
+                    );
+                    
+                    this.createCardMesh(card, position, playerIndex, index);
+                });
+            }
+            
+            // 创建卡牌3D对象
+            createCardMesh(cardConfig, position, playerIndex, handIndex) {
+                const width = 1.6;
+                const height = 2.2;
+                const depth = 0.06;
+                
+                // 随机选择卡背
+                const cardBackIndex = Math.floor(Math.random() * this.cardBacks.length);
+                const cardBackTexture = this.loader.load(this.cardBacks[cardBackIndex]);
+                
+                // 使用用户提供的图片作为卡片正面
+                const cardFrontTexture = this.loader.load(this.cardFronts[0]);
+                
+                // 创建卡牌几何体
+                const geometry = new THREE.BoxGeometry(width, height, depth);
+                
+                // 创建卡牌材质 - 6个面
+                const materials = [
+                    new THREE.MeshStandardMaterial({ color: 0x888888 }), // 右
+                    new THREE.MeshStandardMaterial({ color: 0x888888 }), // 左
+                    new THREE.MeshStandardMaterial({ color: 0x555555 }), // 上
+                    new THREE.MeshStandardMaterial({ color: 0x555555 }), // 下
+                    playerIndex === 0 ? 
+                        new THREE.MeshStandardMaterial({ map: cardFrontTexture }) : // 玩家手牌显示正面
+                        new THREE.MeshStandardMaterial({ map: cardBackTexture }),   // 对手手牌显示背面
+                    new THREE.MeshStandardMaterial({ map: cardBackTexture })         // 背面
+                ];
+                
+                // 创建卡牌网格
+                const card = new THREE.Mesh(geometry, materials);
+                card.position.copy(position);
+                card.rotation.x = Math.PI / 8 * (playerIndex === 0 ? 1 : -1); // 倾斜角度
+                
+                // 保存卡牌数据
+                card.userData = {
+                    isCard: true,
+                    config: cardConfig,
+                    playerIndex,
+                    handIndex,
+                    inHand: true,
+                    selected: false,
+                    originalPosition: position.clone(),
+                    originalRotation: card.quaternion.clone()
+                };
+                
+                // 添加到场景
+                this.scene.add(card);
+                
+                return card;
+            }
+            
+            // 处理鼠标按下
+            onMouseDown(event) {
+                // 计算鼠标位置
+                const mouse = this.getNormalizedMousePosition(event);
+                
+                // 创建射线投射器
+                const raycaster = new THREE.Raycaster();
+                raycaster.setFromCamera(mouse, this.camera);
+                
+                // 检测与卡牌的交点
+                const intersects = raycaster.intersectObjects(this.scene.children);
+                
+                if (intersects.length > 0) {
+                    const object = intersects[0].object;
+                    
+                    if (object.userData && object.userData.isCard && object.userData.inHand && object.userData.playerIndex === 0) {
+                        // 选中卡牌
+                        this.gameState.selectedCard = object;
+                        object.userData.selected = true;
+                        
+                        // 高亮选中的卡牌
+                        object.material[4].color.set(0xffff00);
+                    }
+                }
+            }
+            
+            // 处理鼠标移动
+            onMouseMove(event) {
+                if (this.gameState.selectedCard) {
+                    const card = this.gameState.selectedCard;
+                    
+                    // 计算鼠标位置
+                    const mouse = this.getNormalizedMousePosition(event);
+                    
+                    // 创建射线投射器
+                    const raycaster = new THREE.Raycaster();
+                    raycaster.setFromCamera(mouse, this.camera);
+                    
+                    // 检测与地板的交点
+                    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+                    const intersection = new THREE.Vector3();
+                    raycaster.ray.intersectPlane(plane, intersection);
+                    
+                    // 更新卡牌位置
+                    card.position.set(intersection.x, intersection.y + 0.5, intersection.z);
+                }
+            }
+            
+            // 处理鼠标释放
+            onMouseUp(event) {
+                if (this.gameState.selectedCard) {
+                    const card = this.gameState.selectedCard;
+                    card.userData.selected = false;
+                    
+                    // 移除高亮
+                    card.material[4].color.set(0xffffff);
+                    
+                    // 计算鼠标位置
+                    const mouse = this.getNormalizedMousePosition(event);
+                    
+                    // 创建射线投射器
+                    const raycaster = new THREE.Raycaster();
+                    raycaster.setFromCamera(mouse, this.camera);
+                    
+                    // 检测与地板的交点
+                    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+                    const intersection = new THREE.Vector3();
+                    raycaster.ray.intersectPlane(plane, intersection);
+                    
+                    // 移动卡牌到该位置
+                    this.animationManager.addAnimation(
+                        card,
+                        new THREE.Vector3(intersection.x, 0.5, intersection.z),
+                        new THREE.Quaternion(),
+                        500,
+                        () => {
+                            card.userData.inHand = false;
+                            this.log(`${card.userData.config.name}已上场`);
+                        }
+                    );
+                    
+                    this.gameState.selectedCard = null;
+                }
+            }
+            
+            // 获取归一化鼠标位置
+            getNormalizedMousePosition(event) {
+                const rect = this.renderer.domElement.getBoundingClientRect();
+                
+                return new THREE.Vector2(
+                    ((event.clientX - rect.left) / rect.width) * 2 - 1,
+                    -((event.clientY - rect.top) / rect.height) * 2 + 1
+                );
+            }
+            
+            // 抽卡
+            drawCard() {
+                const player = this.gameState.players[this.gameState.currentPlayer];
+                
+                if (player.deck.length > 0) {
+                    const card = player.deck.pop();
+                    player.hand.push(card);
+                    
+                    this.log(`${player.name}抽到了${card.name}`);
+                    
+                    // 创建新抽到的卡牌并展示
+                    this.showNewCard(card, player);
+                    
+                    this.updateUI();
+                } else {
+                    this.log("卡组已空，无法抽卡！");
+                }
+            }
+            
+            // 展示新抽到的卡牌
+            showNewCard(card, player) {
+                const playerIndex = this.gameState.currentPlayer;
+                const handSize = player.hand.length;
+                const maxHandSize = 10;
+                const offset = handSize > maxHandSize ? 0.25 : 0.35;
+                
+                // 计算新卡牌的位置
+                const position = new THREE.Vector3(
+                    ((handSize - 1) - (handSize - 1) / 2) * offset,
+                    playerIndex === 0 ? -4 : 4,
+                    -5
+                );
+                
+                // 创建卡牌网格
+                const cardMesh = this.createCardMesh(card, position, playerIndex, handSize - 1);
+                
+                // 添加展示动画
+                this.animateCardDraw(cardMesh, playerIndex);
+            }
+            
+            // 添加抽卡动画
+            animateCardDraw(card, playerIndex) {
+                // 起始位置（从卡组位置开始）
+                const startPosition = new THREE.Vector3(
+                    0,
+                    playerIndex === 0 ? -10 : 10,
+                    -10
+                );
+                
+                // 临时位置（展示位置）
+                const tempPosition = new THREE.Vector3(
+                    0,
+                    playerIndex === 0 ? 0 : 0, // 屏幕中央
+                    0
+                );
+                
+                // 最终位置
+                const finalPosition = card.position.clone();
+                
+                // 设置初始位置
+                card.position.copy(startPosition);
+                card.rotation.x = Math.PI / 2;
+                card.rotation.z = Math.PI / 4;
+                card.scale.set(1, 1, 1); // 初始缩放
+                
+                if (playerIndex === 0) {
+                    // 玩家自己抽卡，展示动画
+                    // 第一阶段：从卡组到展示位置，同时旋转到正面（X旋转为0）并放大
+                    this.animationManager.addAnimation(
+                        card,
+                        tempPosition,
+                        new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, 0)),
+                        500,
+                        () => {
+                            // 在展示位置，放大卡牌
+                            card.scale.set(1.5, 1.5, 1.5);
+                            // 第二阶段：停留1000毫秒
+                            setTimeout(() => {
+                                // 第三阶段：缩小并飞到手牌位置，同时旋转到初始角度
+                                this.animationManager.addAnimation(
+                                    card,
+                                    finalPosition,
+                                    new THREE.Quaternion().setFromEuler(
+                                        new THREE.Euler(Math.PI / 8 * (playerIndex === 0 ? 1 : -1), 0, 0)
+                                    ),
+                                    500,
+                                    () => {
+                                        // 动画完成，恢复缩放
+                                        card.scale.set(1, 1, 1);
+                                    }
+                                );
+                            }, 1000);
+                        }
+                    );
+                } else {
+                    // 对手抽卡，直接飞到手牌位置（不展示）
+                    this.animationManager.addAnimation(
+                        card,
+                        finalPosition,
+                        new THREE.Quaternion().setFromEuler(
+                            new THREE.Euler(Math.PI / 8 * (playerIndex === 0 ? 1 : -1), 0, 0)
+                        ),
+                        1000
+                    );
+                }
+            }
+            
+            // 结束回合
+            endTurn() {
+                const currentPlayer = this.gameState.players[this.gameState.currentPlayer];
+                this.log(`${currentPlayer.name}回合结束`);
+                
+                // 切换到下一个玩家
+                this.gameState.currentPlayer = this.gameState.currentPlayer === 0 ? 1 : 0;
+                this.gameState.turnCount++;
+                
+                // 为新回合玩家增加法力最大值
+                const nextPlayer = this.gameState.players[this.gameState.currentPlayer];
+                if (nextPlayer.maxMana < 10) {
+                    nextPlayer.maxMana++;
+                }
+                nextPlayer.mana = nextPlayer.maxMana;
+                
+                this.log(`第${this.gameState.turnCount}回合开始，${nextPlayer.name}的回合`);
+                
+                // 更新UI
+                this.updateUI();
+            }
+            
+            // 重新开始游戏
+            restartGame() {
+                // 清空场景中的所有卡牌对象
+                while(this.scene.children.length > 0){ 
+                    this.scene.remove(this.scene.children[0]); 
+                }
+                
+                // 重置游戏状态
+                this.gameState = {
+                    players: [
+                        { name: "玩家", hp: 30, mana: 1, maxMana: 1, hand: [], deck: [], battlefield: [], discardPile: [] },
+                        { name: "对手", hp: 30, mana: 1, maxMana: 1, hand: [], deck: [], battlefield: [], discardPile: [] }
+                    ],
+                    currentPlayer: 0,
+                    phase: "draw",
+                    turnCount: 1,
+                    selectedCard: null
+                };
+                
+                // 重新初始化光照
+                this.initLighting();
+                
+                // 重新初始化游戏状态
+                this.initGameState();
+                
+                this.log("游戏已重新开始");
+            }
+            
+            // 更新UI
+            updateUI() {
+                // 更新玩家状态
+                for (let i = 0; i < this.gameState.players.length; i++) {
+                    const player = this.gameState.players[i];
+                    const playerElement = document.querySelector(`.player${i + 1}-info`);
+                    
+                    playerElement.querySelector('.hp').textContent = player.hp;
+                    playerElement.querySelector('.mana').textContent = player.mana;
+                    playerElement.querySelector('.max-mana').textContent = player.maxMana;
+                    
+                    // 高亮当前玩家
+                    if (i === this.gameState.currentPlayer) {
+                        playerElement.classList.add('active');
+                    } else {
+                        playerElement.classList.remove('active');
+                    }
+                }
+                
+                // 更新卡组计数
+                const deckCount = this.gameState.players[0].deck.length;
+                document.getElementById('deckCount').textContent = deckCount;
+                
+                // 更新手牌数量
+                document.getElementById('playerHandCount').textContent = 
+                    this.gameState.players[0].hand.length;
+                document.getElementById('opponentHandCount').textContent = 
+                    this.gameState.players[1].hand.length;
+            }
+            
+            // 添加日志
+            log(message) {
+                const logContainer = document.getElementById('logEntries');
+                const entry = document.createElement('div');
+                entry.className = 'log-entry';
+                entry.textContent = message;
+                
+                logContainer.appendChild(entry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+            
+            // 设置事件监听器
+            setupEventListeners() {
+                document.getElementById('drawBtn').addEventListener('click', () => {
+                    this.drawCard();
+                });
+                
+                document.getElementById('endTurnBtn').addEventListener('click', () => {
+                    this.endTurn();
+                });
+                
+                document.getElementById('restartBtn').addEventListener('click', () => {
+                    this.restartGame();
+                });
+            }
+            
+            // 窗口大小变化处理
+            onWindowResize() {
+                const container = this.canvasContainer.parentElement;
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                
+                this.camera.aspect = width / height;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(width, height);
+            }
+            
+            // 动画循环
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                this.animationManager.update();
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+        
+        // 卡牌动画管理器
+        class CardAnimationManager {
+            constructor() {
+                this.animations = [];
+            }
+            
+            // 添加动画
+            addAnimation(object, targetPosition, targetRotation, duration, onComplete) {
+                this.animations.push({
+                    object,
+                    startPosition: object.position.clone(),
+                    targetPosition,
+                    startRotation: object.quaternion.clone(),
+                    targetRotation,
+                    startTime: performance.now(),
+                    duration,
+                    onComplete
+                });
+            }
+            
+            // 更新动画
+            update() {
+                const now = performance.now();
+                
+                for (let i = this.animations.length - 1; i >= 0; i--) {
+                    const anim = this.animations[i];
+                    const elapsed = now - anim.startTime;
+                    const progress = Math.min(elapsed / anim.duration, 1);
+                    
+                    // 插值位置
+                    anim.object.position.lerpVectors(
+                        anim.startPosition, 
+                        anim.targetPosition, 
+                        progress
+                    );
+                    
+                    // 插值旋转
+                    anim.object.quaternion.slerp(
+                        anim.targetRotation, 
+                        progress
+                    );
+                    
+                    // 动画完成
+                    if (progress === 1) {
+                        if (anim.onComplete) {
+                            anim.onComplete();
+                        }
+                        this.animations.splice(i, 1);
+                    }
+                }
+            }
+        }
+        
+        // 初始化游戏
+        window.onload = function() {
+            const game = new GameController();
+            game.init();
+        };
+    </script>
+</body>
+</html>
